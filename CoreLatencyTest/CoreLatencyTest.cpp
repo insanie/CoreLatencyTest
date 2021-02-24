@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <intrin.h>
 #include <windows.h>
 #include <malloc.h>    
@@ -65,7 +66,7 @@ CPUInfo getCPUInfo()
     info.cpuidFamily = getCpuidFamily();
     getCpuidVendor(info.vendor);
 
-    glpi = (LPFN_GLPI)GetProcAddress(GetModuleHandle(TEXT("kernel32")),"GetLogicalProcessorInformation");
+    glpi = (LPFN_GLPI)GetProcAddress(GetModuleHandle(TEXT("kernel32")), "GetLogicalProcessorInformation");
     if (NULL == glpi)
     {
         cout << "GetLogicalProcessorInformation is not supported";
@@ -79,7 +80,7 @@ CPUInfo getCPUInfo()
         {
             if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
             {
-                if (buffer) 
+                if (buffer)
                 {
                     free(buffer);
                 }
@@ -268,15 +269,15 @@ int main()
     CPUInfo cpuInfo = getCPUInfo();
 
     //Check for Zen 
-    if (strcmp(cpuInfo.vendor, "AuthenticAMD") != 0 || cpuInfo.cpuidFamily != 0x17) {
-        cout << "Warning: This program has only been tested to work on AMD Zen." << endl;
-    }
+    //if (strcmp(cpuInfo.vendor, "AuthenticAMD") != 0 || cpuInfo.cpuidFamily != 0x17) {
+    //    cout << "Warning: This program has only been tested to work on AMD Zen." << endl;
+    //}
 
     cout << "Package Count: " << cpuInfo.packageCount << endl;
-    cout << "NUMA Node Count: " << cpuInfo.packageCount << endl;
+    cout << "NUMA Node Count: " << cpuInfo.numaNodeCount << endl;
     cout << "Cores: " << cpuInfo.physicalCoreCount << "C / " << cpuInfo.logicalCoreCount << "T" << endl;
-    cout << "CCX Count: " << cpuInfo.L3CacheCount << endl;
-    cout << "Cores per CCX: " << cpuInfo.getCoresPerL3() << endl;
+    cout << "L3 caches cluster count: " << cpuInfo.L3CacheCount << endl;
+    cout << "Cores per L3 cache cluster: " << cpuInfo.getCoresPerL3() << endl;
     cout << "Cores per package: " << cpuInfo.getCoresPerPackage() << endl;
     cout << "Cores per NUMA node: " << cpuInfo.getCoresPerNode() << endl << endl;
 
@@ -285,34 +286,89 @@ int main()
 
     cout << "Ticks per ns: " << cpuInfo.ticksPerNanosecond << endl << endl;
 
-    cout << "Running latency tests..." << endl;
+    //cout << "Running latency tests..." << endl;
     unsigned long long time;
-    
+
     //Same coref
-    time = testSingleCore();
-    cout << "Same Thread : " << (time / iterations) / cpuInfo.ticksPerNanosecond << " ns" << endl;
+    //time = testSingleCore();
+    //cout << "Same Thread : " << (time / iterations) / cpuInfo.ticksPerNanosecond << " ns" << endl;
 
     //Same core
-    if (cpuInfo.getThreadsPerCore() > 1) {
+    //if (cpuInfo.getThreadsPerCore() > 1) {
         //Measure latency to same core (other thread)
-        time = measureLatency(1);
-        cout << "Same Core   : " << (time / iterations) / cpuInfo.ticksPerNanosecond << " ns" << endl;
-    }
+        //time = measureLatency(1);
+        //cout << "Same Core   : " << (time / iterations) / cpuInfo.ticksPerNanosecond << " ns" << endl;
+    //}
 
     //Same CCX
-    if (cpuInfo.getCoresPerL3() > 1) {
+    //if (cpuInfo.getCoresPerL3() > 1) {
         //Measure latency to another core (same CCX)
-        time = measureLatency(cpuInfo.getThreadsPerCore());
-        cout << "Same CCX    : " << (time / iterations) / cpuInfo.ticksPerNanosecond << " ns" << endl;
-    }
+        //time = measureLatency(cpuInfo.getThreadsPerCore());
+        //cout << "Same CCX    : " << (time / iterations) / cpuInfo.ticksPerNanosecond << " ns" << endl;
+    //}
 
     //Different CCX (same NUMA, same Package)
-    if (cpuInfo.L3CacheCount > 1 && cpuInfo.getL3PerPackage() > 1 && cpuInfo.getL3PerNUMANode() > 1) {
+    //if (cpuInfo.L3CacheCount > 1 && cpuInfo.getL3PerPackage() > 1 && cpuInfo.getL3PerNUMANode() > 1) {
         //Measure latency to another core (different CCX)
-        time = measureLatency(cpuInfo.getThreadsPerCore() * cpuInfo.getCoresPerL3());
-        cout << "Other CCX   : " << (time / iterations) / cpuInfo.ticksPerNanosecond << " ns" << endl;
-    }
+        //time = measureLatency(cpuInfo.getThreadsPerCore() * cpuInfo.getCoresPerL3());
+        //cout << "Other CCX   : " << (time / iterations) / cpuInfo.ticksPerNanosecond << " ns" << endl;
+    //}
 
+    //cout << endl;
+
+    //Create csv for table output
+    cout << "Building latency table..." << endl;
+    ofstream table;
+    table.open("latency_table.csv");
+
+    //Populate first row of the table
+    table << "Cores;";
+    for (int i = 0; i < cpuInfo.getThreadsPerCore() * cpuInfo.getCoresPerNode(); i++)
+    {
+        table << i << ";";
+    }
+    table << endl;
+
+    //Start progress counter
+    int count = 1;
+    int tests = (cpuInfo.getThreadsPerCore() * cpuInfo.getCoresPerNode()) * (cpuInfo.getThreadsPerCore() * cpuInfo.getCoresPerNode());
+    cout << "Running test" << endl;
+
+    //Start first for cycle to set core to measure latency from
+    for (int i = 0; i < cpuInfo.getThreadsPerCore() * cpuInfo.getCoresPerNode(); i++)
+    {
+        //Set thread affinity to the core from first for cycle
+        SetThreadAffinityMask(GetCurrentThread(), (static_cast<DWORD_PTR>(1) << i));
+        table << i << ";";
+        //Start second for cycle to set core to measure latebcy to
+        for (int y = 0; y < cpuInfo.getThreadsPerCore() * cpuInfo.getCoresPerNode(); y++)
+        {
+            if (i == y)
+            {
+                //Measure same core latency if cycles' variables match
+                cout << count << " out of " << tests;
+                time = testSingleCore();
+                table << round((time / iterations) / cpuInfo.ticksPerNanosecond) << ";";
+                count++;
+                cout << "\r";
+            }
+            else
+            {
+                cout << count << " out of " << tests;
+                time = measureLatency(y);
+                table << round((time / iterations) / cpuInfo.ticksPerNanosecond) << ";";
+                count++;
+                cout << "\r";
+            }
+        }
+        table << endl;
+    }
+    table << endl;
+
+    //Close csv output table
+    table.close();
+    cout << endl;
+    cout << "Latency table successfully created";
     cout << endl;
 
     system("pause");

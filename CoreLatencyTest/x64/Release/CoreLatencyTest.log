@@ -1,0 +1,5 @@
+﻿cl : command line warning D9025: overriding '/sdl' with '/GS-'
+  CoreLatencyTest.cpp
+  Generating code
+  Finished generating code
+  CoreLatencyTest.vcxproj -> E:\Projects\CoreLatencyTest\x64\Release\CoreLatencyTest.exe
