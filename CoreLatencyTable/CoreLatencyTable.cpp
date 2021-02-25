@@ -181,6 +181,7 @@ double getTSCTicksPerNanosecond() {
 }
 
 const int iterations = 100000000;
+//const int iterations = 100000000;
 int counter = -1;
 
 void workThread(int core) {
@@ -188,7 +189,7 @@ void workThread(int core) {
     SetThreadAffinityMask(GetCurrentThread(), (static_cast<DWORD_PTR>(1) << core));
 
     //Make sure core affinity gets set before continuing
-    Sleep(10);
+    Sleep(500);
 
     //Loop bouncing data back and forth between cores
     while (counter != 0) {
@@ -203,11 +204,11 @@ long long testSingleCore() {
     unsigned long long end;
 
     counter = -1;
+    counter = counter - iterations;
 
     //Record start time
     start = __rdtsc();
 
-    counter = counter - iterations;
     while (counter != 0) {
         if (counter < 0) {
             counter = -counter - 1;
@@ -220,7 +221,7 @@ long long testSingleCore() {
     //Record end time
     end = __rdtsc();
 
-    return end - start;
+    return (end - start) / iterations;
 }
 
 long long measureLatency(int core) {
@@ -234,13 +235,13 @@ long long measureLatency(int core) {
     thread coreWorker(workThread, core);
 
     //Wait for it to start and lock affinity
-    Sleep(250);
+    Sleep(1000);
+    counter = counter - iterations;
 
     //Record start time
     start = __rdtsc();
 
     //Loop bouncing data back and forth between cores
-    counter = counter - iterations;
     while (counter != 0) {
         if (counter < 0) {
             counter = -counter - 1;
@@ -254,11 +255,13 @@ long long measureLatency(int core) {
     coreWorker.join();
 
     //Return total time taken
-    return end - start;
+    return (end - start) / iterations;
 }
 
 int main()
 {
+    unsigned long long time;
+
     //Lock main thread to Core 0
     SetThreadAffinityMask(GetCurrentThread(), (static_cast<DWORD_PTR>(1) << 0));
 
@@ -276,7 +279,7 @@ int main()
     cout << "Package Count: " << cpuInfo.packageCount << endl;
     cout << "NUMA Node Count: " << cpuInfo.numaNodeCount << endl;
     cout << "Cores: " << cpuInfo.physicalCoreCount << "C / " << cpuInfo.logicalCoreCount << "T" << endl;
-    cout << "L3 caches cluster count: " << cpuInfo.L3CacheCount << endl;
+    cout << "L3 cache clusters count: " << cpuInfo.L3CacheCount << endl;
     cout << "Cores per L3 cache cluster: " << cpuInfo.getCoresPerL3() << endl;
     cout << "Cores per package: " << cpuInfo.getCoresPerPackage() << endl;
     cout << "Cores per NUMA node: " << cpuInfo.getCoresPerNode() << endl << endl;
@@ -287,7 +290,6 @@ int main()
     cout << "Ticks per ns: " << cpuInfo.ticksPerNanosecond << endl << endl;
 
     //cout << "Running latency tests..." << endl;
-    unsigned long long time;
 
     //Same coref
     //time = testSingleCore();
@@ -318,6 +320,7 @@ int main()
 
     //Create csv for table output
     cout << "Building latency table..." << endl;
+    cout << endl;
     ofstream table;
     table.open("latency_table.csv");
 
@@ -348,7 +351,7 @@ int main()
                 //Measure same core latency if cycles' variables match
                 cout << count << " out of " << tests;
                 time = testSingleCore();
-                table << round((time / iterations) / cpuInfo.ticksPerNanosecond) << ";";
+                table << round(time / cpuInfo.ticksPerNanosecond) << ";";
                 count++;
                 cout << "\r";
             }
@@ -356,7 +359,7 @@ int main()
             {
                 cout << count << " out of " << tests;
                 time = measureLatency(y);
-                table << round((time / iterations) / cpuInfo.ticksPerNanosecond) << ";";
+                table << round(time / cpuInfo.ticksPerNanosecond) << ";";
                 count++;
                 cout << "\r";
             }
@@ -364,11 +367,13 @@ int main()
         table << endl;
     }
     table << endl;
+    cout << endl;
 
     //Close csv output table
     table.close();
     cout << endl;
-    cout << "Latency table successfully created";
+    cout << "Latency table successfully created!";
+    cout << endl;
     cout << endl;
 
     system("pause");
