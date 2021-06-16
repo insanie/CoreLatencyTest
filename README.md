@@ -35,7 +35,7 @@ Actually, you can use the table right away - it shows all the measured data. But
 ![4_spreadsheet_conditional](https://user-images.githubusercontent.com/43582428/122260583-20011180-cedc-11eb-8977-46f67173b80a.png)
 
 # How does it work
-The app creates two cycles on two threads that are being measured. Those cycles share some data and perform simple math one after another. The app measures time needed for those calculations and then subtracts the time of calculations themselves. Thus, we're left only with a latency time that a core waited to pick up data manipulated by another core.
+The app creates two cycles on two threads that are being measured. Those cycles share some data and perform simple math one after another. The app measures time needed for those calculations and then subtracts the time of calculations themselves. Thus, we're left only with a latency time that the core waited to pick up data manipulated by another core.
 Those cycles go for **a lot** of iterations to prevent margin of error altering the result.
 
-###### Credits to jedi95 and its initial CoreLatencyTest that made this app happen!
+#### Credits to jedi95 and its initial CoreLatencyTest that made this app happen!
