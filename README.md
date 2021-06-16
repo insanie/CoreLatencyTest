@@ -27,12 +27,18 @@ Do not panic if it takes some time! The more threads you have, the more time it 
 After tests are completed you may find a file named **latency_table.csv** right in the directory that contains the app. Open it with a spreadsheet app of your choice. Most of the times the spreadsheet app will choose semicolon as a divider by default. If not so, you have to pick it manually.
 ![2_spreadsheet_table](https://user-images.githubusercontent.com/43582428/122259645-1034fd80-cedb-11eb-96ec-532d5bc4d61f.png)
 
-## Apply conditional formatting
-Actually, you can use the table right away - it shows all the measured data. But! We are here to make it more comprehencive, right? If your spreadsheet app supports conditional formatting, then do that! You need to select **only** cells with measured data, not the core number ones!
-![3_conditional_formatting](https://user-images.githubusercontent.com/43582428/122260504-0790f700-cedc-11eb-906e-7111b62c1b25.png)
+<details>
+ <summary>OPTIONAL</summary>
+  
+  ## Apply conditional formatting
+  Actually, you can use the table right away - it shows all the measured data. But! We are here to make it more comprehencive, right? If your spreadsheet app supports conditional formatting, then do that! You need to select **only** cells with measured data, not the core number ones!
+  
+  ![3_conditional_formatting](https://user-images.githubusercontent.com/43582428/122260504-0790f700-cedc-11eb-906e-7111b62c1b25.png)
 
-## Final result
-![4_spreadsheet_conditional](https://user-images.githubusercontent.com/43582428/122260583-20011180-cedc-11eb-8977-46f67173b80a.png)
+  ## Final result
+  ![4_spreadsheet_conditional](https://user-images.githubusercontent.com/43582428/122260583-20011180-cedc-11eb-8977-46f67173b80a.png)
+</details>
+
 
 # How does it work
 The app creates two cycles on two threads that are being measured. Those cycles share some data and perform simple math one after another. The app measures time needed for those calculations and then subtracts the time of calculations themselves. Thus, we're left only with a latency time that the core waited to pick up data manipulated by another core.
